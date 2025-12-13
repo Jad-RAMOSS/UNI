@@ -27,15 +27,14 @@ Camera-based controller that maps hand gestures to system audio. Uses MediaPipe 
 └── README.md
 ```
 
-## Quickstart
-```bash
-python -m venv .venv
-source .venv/Scripts/activate   # PowerShell: .venv\Scripts\Activate.ps1
-pip install opencv-python mediapipe numpy pycaw comtypes
-
-python scripts/volume_control_advanced.py   # recommended entry point
+## Quickstart (Windows-friendly)
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python scripts\volume_control_advanced.py   # recommended entry point
 ```
-Notes: run from the project root so imports resolve; press `Esc` to quit; change camera with `cv2.VideoCapture(<index>)` if needed.
+Notes: scripts now prepend the repo root to `PYTHONPATH`, so you can also run them via an absolute path from any working directory. Press `Esc` to quit; change camera with `cv2.VideoCapture(<index>)` if needed.
 
 ## How It Works
 1. Capture a frame from the webcam.
