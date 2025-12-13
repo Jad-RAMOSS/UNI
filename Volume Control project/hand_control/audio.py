@@ -1,15 +1,17 @@
 """Audio endpoint helpers built on top of pycaw."""
 
-from ctypes import POINTER, cast
-
-from comtypes import CLSCTX_ALL
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from pycaw.pycaw import AudioUtilities
 
 __all__ = ["get_audio_endpoint"]
 
 
 def get_audio_endpoint():
-    """Return the default speaker endpoint for volume control."""
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    return cast(interface, POINTER(IAudioEndpointVolume))
+    """
+    Return the default speaker endpoint for volume control.
+    Compatible with older pycaw versions.
+    """
+    device = AudioUtilities.GetSpeakers()
+
+    # OLD pycaw exposes volume like this
+    volume = device.EndpointVolume
+    return volume

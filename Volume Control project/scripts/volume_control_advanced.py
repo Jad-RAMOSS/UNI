@@ -36,6 +36,7 @@ def _parse_args():
 
 
 def main():
+    print("App started")
     args = _parse_args()
     detector = HandDetector(detectionCon=0.7, maxHands=1, mirror=args.mirror)
     volume = get_audio_endpoint()
