@@ -1,20 +1,47 @@
+import argparse
 import time
+
 import cv2
 import numpy as np
 
 from hand_control import HandDetector, get_audio_endpoint
 
 
-def main(camera_index: int = 0):
-    detector = HandDetector(detectionCon=0.7, maxHands=1)
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Control system volume with hand gestures.")
+    parser.add_argument("--camera", type=int, default=0, help="Camera index for cv2.VideoCapture.")
+    parser.add_argument("--smoothness", type=int, default=10, help="Round volume percentage to nearest N.")
+    parser.add_argument("--min-distance", type=int, default=25, help="Minimum thumb-index distance in pixels.")
+    parser.add_argument("--max-distance", type=int, default=150, help="Maximum thumb-index distance in pixels.")
+    parser.add_argument("--min-area", type=int, default=30, help="Minimum hand bbox area gate.")
+    parser.add_argument("--max-area", type=int, default=500, help="Maximum hand bbox area gate.")
+    parser.add_argument(
+        "--no-pinky-guard",
+        action="store_true",
+        help="Disable pinky confirmation requirement before applying volume.",
+    )
+    parser.add_argument(
+        "--mirror",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Mirror the camera feed for a selfie view.",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = _parse_args()
+    detector = HandDetector(detectionCon=0.7, maxHands=1, mirror=args.mirror)
     volume = get_audio_endpoint()
 
     vol_bar = 260
     vol_perc = 0
     color = (255, 0, 0)
-    smoothness = 10
+    smoothness = max(1, args.smoothness)
+    min_distance = max(1, args.min_distance)
+    max_distance = max(min_distance + 1, args.max_distance)
 
-    cap = cv2.VideoCapture(camera_index)
+    cap = cv2.VideoCapture(args.camera)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -30,14 +57,15 @@ def main(camera_index: int = 0):
             landmarks, bbox = detector.findPosition(frame, draw=True)
             if landmarks and bbox != (0, 0, 0, 0):
                 area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) // 100
-                if 30 < area < 500:
+                if args.min_area < area < args.max_area:
                     length, frame, coordinates = detector.findDistance(4, 8, frame)
-                    vol_bar = int(np.interp(length, [25, 150], [260, 10]))
-                    vol_perc = int(np.interp(length, [25, 150], [0, 100]))
+                    vol_bar = int(np.interp(length, [min_distance, max_distance], [260, 10]))
+                    vol_perc = int(np.interp(length, [min_distance, max_distance], [0, 100]))
                     vol_perc = smoothness * round(vol_perc / smoothness)
 
                     fingers = detector.fingersUp()
-                    if len(fingers) == 5 and not fingers[4]:
+                    apply_guard = len(fingers) == 5 and (args.no_pinky_guard or not fingers[4])
+                    if apply_guard:
                         volume.SetMasterVolumeLevelScalar(vol_perc / 100, None)
                         cv2.circle(frame, (coordinates[4], coordinates[5]), 15, (0, 0, 255), cv2.FILLED)
                         color = (0, 255, 0)
