@@ -36,6 +36,11 @@ python scripts\volume_control_advanced.py   # recommended entry point
 ```
 Notes: scripts now prepend the repo root to `PYTHONPATH`, so you can also run them via an absolute path from any working directory. Press `Esc` to quit; change camera with `cv2.VideoCapture(<index>)` if needed.
 
+### Camera selection & fallback
+- All scripts will stay open even if no camera feed is available; a "No camera feed" overlay appears while they keep retrying.
+- For the advanced script, pass `--camera <index>` to point at DroidCam/virtual/secondary devices (check Device Manager for the index).
+- For other scripts, adjust the `camera_index` variable near the top of the file if you prefer a non-default device.
+
 ## How It Works
 1. Capture a frame from the webcam.
 2. Detect hands via `HandDetector.findHands` (mirrors by default for a selfie view).
@@ -101,11 +106,11 @@ Legacy note: `archive/hand_detector_legacy.py` is kept only for historical compa
 - Recovery: graceful exit on `Esc`; camera released and windows destroyed.
 
 ## Agile Snapshot (5-person allocation)
-- Product (Aisha): Define gesture UX, acceptance criteria, distance thresholds, and demo scenarios; maintain backlog.
-- CV/ML (Ben): Own `hand_control/hand_tracking.py` tuning, finger state logic, and robustness checks.
-- Audio/Platform (Chloe): Own `pycaw` integration, endpoint setup helpers, and Windows compatibility testing.
-- App/UX (Diego): Own runtime scripts, HUD overlays, camera defaults, and CLI ergonomics.
-- QA/DevOps (Emery): Own setup docs, reproducible env (venv, pins), smoke/regression checklist, and release notes.
+- Product (Jad): Define gesture UX, acceptance criteria, distance thresholds, and demo scenarios; maintain backlog.
+- CV/ML (Hazem): Own `hand_control/hand_tracking.py` tuning, finger state logic, and robustness checks.
+- Audio/Platform (Seif): Own `pycaw` integration, endpoint setup helpers, and Windows compatibility testing.
+- App/UX (Mahmoud): Own runtime scripts, HUD overlays, camera defaults, and CLI ergonomics.
+- QA/DevOps (Yasser): Own setup docs, reproducible env (venv, pins), smoke/regression checklist, and release notes.
 
 Current sprint goals:
 - Ship stable advanced mode with pinky safety and smoothing (Ben + Chloe).
