@@ -48,36 +48,70 @@ def main():
     min_distance = max(1, args.min_distance)
     max_distance = max(min_distance + 1, args.max_distance)
 
-    cap = cv2.VideoCapture(args.camera)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    camera_index = args.camera
+
+    def _open_capture():
+        cap = cv2.VideoCapture(camera_index)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        return cap
+
+    cap = _open_capture()
 
     prev_time = 0.0
 
     try:
         while True:
-            success, frame = cap.read()
-            if not success:
-                break
+            frame = None
+            if cap and cap.isOpened():
+                success, frame = cap.read()
+                if not success:
+                    cap.release()
+                    cap = None
 
-            frame = detector.findHands(frame)
-            landmarks, bbox = detector.findPosition(frame, draw=True)
-            if landmarks and bbox != (0, 0, 0, 0):
-                area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) // 100
-                if args.min_area < area < args.max_area:
-                    length, frame, coordinates = detector.findDistance(4, 8, frame)
-                    vol_bar = int(np.interp(length, [min_distance, max_distance], [260, 10]))
-                    vol_perc = int(np.interp(length, [min_distance, max_distance], [0, 100]))
-                    vol_perc = smoothness * round(vol_perc / smoothness)
+            if frame is None:
+                if cap:
+                    cap.release()
+                cap = _open_capture()
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(
+                    frame,
+                    f"No camera feed (index {camera_index})",
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.putText(
+                    frame,
+                    "Connect/enable camera; will retry...",
+                    (20, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (180, 180, 180),
+                    1,
+                )
+                time.sleep(0.25)
+            else:
+                frame = detector.findHands(frame)
+                landmarks, bbox = detector.findPosition(frame, draw=True)
+                if landmarks and bbox != (0, 0, 0, 0):
+                    area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) // 100
+                    if args.min_area < area < args.max_area:
+                        length, frame, coordinates = detector.findDistance(4, 8, frame)
+                        vol_bar = int(np.interp(length, [min_distance, max_distance], [260, 10]))
+                        vol_perc = int(np.interp(length, [min_distance, max_distance], [0, 100]))
+                        vol_perc = smoothness * round(vol_perc / smoothness)
 
-                    fingers = detector.fingersUp()
-                    apply_guard = len(fingers) == 5 and (args.no_pinky_guard or not fingers[4])
-                    if apply_guard:
-                        volume.SetMasterVolumeLevelScalar(vol_perc / 100, None)
-                        cv2.circle(frame, (coordinates[4], coordinates[5]), 15, (0, 0, 255), cv2.FILLED)
-                        color = (0, 255, 0)
-                    else:
-                        color = (255, 0, 0)
+                        fingers = detector.fingersUp()
+                        apply_guard = len(fingers) == 5 and (args.no_pinky_guard or not fingers[4])
+                        if apply_guard:
+                            volume.SetMasterVolumeLevelScalar(vol_perc / 100, None)
+                            cv2.circle(frame, (coordinates[4], coordinates[5]), 15, (0, 0, 255), cv2.FILLED)
+                            color = (0, 255, 0)
+                        else:
+                            color = (255, 0, 0)
 
             cv2.rectangle(frame, (10, 425), (260, 460), (37, 235, 7), 3)
             cv2.rectangle(frame, (vol_bar, 425), (260, 460), (37, 235, 7), cv2.FILLED)
@@ -129,7 +163,8 @@ def main():
             if cv2.waitKey(1) & 0xFF == 27:
                 break
     finally:
-        cap.release()
+        if cap:
+            cap.release()
         cv2.destroyAllWindows()
 
 

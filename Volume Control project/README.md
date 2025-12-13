@@ -89,7 +89,7 @@ Legacy note: `archive/hand_detector_legacy.py` is kept only for historical compa
 - Mirroring: set `mirror=False` in `HandDetector` for a non-selfie view.
 
 ## Troubleshooting
-- Webcam not opening: verify the index; ensure no other app is locking the camera.
+- Webcam not opening: a "No camera feed" overlay will appear and the app will keep retrying so you can plug in or switch sources. Use `--camera <index>` on the advanced script (or tweak `camera_index` in the others) to point at DroidCam/virtual devices; ensure no other app is locking the camera.
 - Volume not changing: confirm Windows + `pycaw` installed; try `volume_control_basic.py` to bypass safety gates.
 - Jittery movement: increase `smoothness`, improve lighting, or stabilize hand position.
 - Landmarks missing: raise `detectionCon`, improve lighting, or ensure hand is fully in frame.

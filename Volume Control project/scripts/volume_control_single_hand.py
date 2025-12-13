@@ -22,42 +22,76 @@ def main():
     vol_perc = 0
     locked_hand_index = None
 
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    camera_index = 0
+
+    def _open_capture():
+        cap = cv2.VideoCapture(camera_index)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        return cap
+
+    cap = _open_capture()
 
     prev_time = 0.0
 
     try:
         while True:
-            success, frame = cap.read()
-            if not success:
-                break
+            frame = None
+            if cap and cap.isOpened():
+                success, frame = cap.read()
+                if not success:
+                    cap.release()
+                    cap = None
 
-            frame = detector.findHands(frame)
+            if frame is None:
+                if cap:
+                    cap.release()
+                cap = _open_capture()
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(
+                    frame,
+                    f"No camera feed (index {camera_index})",
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.putText(
+                    frame,
+                    "Connect/enable camera; will retry...",
+                    (20, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (180, 180, 180),
+                    1,
+                )
+                time.sleep(0.25)
+            else:
+                frame = detector.findHands(frame)
 
-            if detector.results and detector.results.multi_hand_landmarks:
-                if locked_hand_index is None:
-                    locked_hand_index = 0
+                if detector.results and detector.results.multi_hand_landmarks:
+                    if locked_hand_index is None:
+                        locked_hand_index = 0
 
-                if locked_hand_index < len(detector.results.multi_hand_landmarks):
-                    landmarks, _ = detector.findPosition(frame, handNo=locked_hand_index)
-                    if landmarks:
-                        x1, y1 = landmarks[4][1], landmarks[4][2]
-                        x2, y2 = landmarks[8][1], landmarks[8][2]
-                        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                    if locked_hand_index < len(detector.results.multi_hand_landmarks):
+                        landmarks, _ = detector.findPosition(frame, handNo=locked_hand_index)
+                        if landmarks:
+                            x1, y1 = landmarks[4][1], landmarks[4][2]
+                            x2, y2 = landmarks[8][1], landmarks[8][2]
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
-                        cv2.line(frame, (x1, y1), (x2, y2), (136, 252, 3), 4)
-                        cv2.circle(frame, (cx, cy), 15, (136, 252, 3), cv2.FILLED)
+                            cv2.line(frame, (x1, y1), (x2, y2), (136, 252, 3), 4)
+                            cv2.circle(frame, (cx, cy), 15, (136, 252, 3), cv2.FILLED)
 
-                        length = math.hypot(x2 - x1, y2 - y1)
-                        vol_level = np.interp(length, [25, 150], [min_vol, max_vol])
-                        vol_bar = int(np.interp(length, [25, 150], [260, 10]))
-                        vol_perc = int(np.interp(length, [25, 150], [0, 100]))
+                            length = math.hypot(x2 - x1, y2 - y1)
+                            vol_level = np.interp(length, [25, 150], [min_vol, max_vol])
+                            vol_bar = int(np.interp(length, [25, 150], [260, 10]))
+                            vol_perc = int(np.interp(length, [25, 150], [0, 100]))
 
-                        volume.SetMasterVolumeLevel(vol_level, None)
-                        if length < 25:
-                            cv2.circle(frame, (cx, cy), 15, (0, 0, 255), cv2.FILLED)
+                            volume.SetMasterVolumeLevel(vol_level, None)
+                            if length < 25:
+                                cv2.circle(frame, (cx, cy), 15, (0, 0, 255), cv2.FILLED)
 
             cv2.rectangle(frame, (10, 425), (260, 460), (37, 235, 7), 3)
             cv2.rectangle(frame, (vol_bar, 425), (260, 460), (37, 235, 7), cv2.FILLED)
@@ -88,7 +122,8 @@ def main():
             if cv2.waitKey(1) & 0xFF == 27:
                 break
     finally:
-        cap.release()
+        if cap:
+            cap.release()
         cv2.destroyAllWindows()
 
 
