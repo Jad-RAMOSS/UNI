@@ -107,6 +107,16 @@ def main():
                 (255, 0, 0),
                 2,
             )
+            guard_text = "Guard: OFF" if args.no_pinky_guard else "Guard: pinky"
+            cv2.putText(
+                frame,
+                f"{guard_text} | Smooth: {smoothness}",
+                (20, 45),
+                cv2.FONT_HERSHEY_COMPLEX,
+                0.5,
+                (100, 170, 255),
+                1,
+            )
 
             cv2.imshow("Advanced Volume Control", frame)
             if cv2.waitKey(1) & 0xFF == 27:
